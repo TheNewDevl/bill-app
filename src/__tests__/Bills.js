@@ -48,6 +48,15 @@ describe("Given I am connected as an employee", () => {
       const billForm = await waitFor(() => screen.getByTestId('form-new-bill'))
       expect(billForm).toBeTruthy()
     })
+    test("Then when a click on the icon eye, modal img src should be icon eye data-bill-url", async () => {
+      new Bills({
+        document, onNavigate, store: mockStore, localStorage: window.localStorage})
+      $.fn.modal = jest.fn()
+      const iconEye = await waitFor(() => screen.getAllByTestId('icon-eye'))
+      userEvent.click(iconEye[0])
+      const modalImg = document.querySelector('.modal-body img')
+      expect(modalImg.getAttribute('src')).toBe(iconEye[0].getAttribute('data-bill-url'))
+    })
   })
 })
 
