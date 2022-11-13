@@ -118,6 +118,33 @@ describe("Given I am a user connected as employee", () => {
         const message = await screen.getByText(/Erreur 500/)
         expect(message).toBeTruthy()
       })
+
+      test("fetches messages from an API but get corrupted data", async () => {
+        mockStore.bills.mockImplementationOnce(() => {
+          return {
+            list : () =>  {
+              return Promise.resolve([{
+                "id": "47qAXb6fIm2zOKkLzMro",
+                "vat": "80",
+                "fileUrl": "https://test.storage.tld/v0/b/billable-677b6.a…f-1.jpg?alt=media&token=c1640e12-a24b-4b11-ae52-529112e9602a",
+                "status": "pending",
+                "type": "Hôtel et logement",
+                "commentary": "séminaire billed",
+                "name": "encore",
+                "fileName": "preview-facture-free-201801-pdf-1.jpg",
+                "date": "fake date",
+                "amount": 400,
+                "commentAdmin": "ok",
+                "email": "a@a",
+                "pct": 20
+              }])
+            }
+          }})
+        window.onNavigate(ROUTES_PATH.Bills)
+        await new Promise(process.nextTick);
+        const date = screen.getByText(/fake date/)
+        expect(date).toBeTruthy()
+      })
     })
   })
 })
