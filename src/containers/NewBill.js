@@ -27,7 +27,8 @@ export default class NewBill {
       alert(fileTypeError)
       console.log(fileTypeError)
       input.value = ""
-      throw new Error(fileTypeError)
+      input.files = []
+      return
     }
 
     const filePath = e.target.value.split(/\\/g)
