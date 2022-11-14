@@ -10,11 +10,11 @@ export default class NewBill {
     formNewBill.addEventListener("submit", this.handleSubmit)
     const file = this.document.querySelector(`input[data-testid="file"]`)
     file.addEventListener("change", this.handleChangeFile)
-    this.fileUrl = null
-    this.fileName = null
     this.billId = null
     new Logout({ document, localStorage, onNavigate })
+    this.formData = new FormData()
   }
+
   handleChangeFile = e => {
     e.preventDefault()
     const input =  this.document.querySelector(`input[data-testid="file"]`)
@@ -31,51 +31,37 @@ export default class NewBill {
       return
     }
 
-    const filePath = e.target.value.split(/\\/g)
-    const fileName = filePath[filePath.length-1]
-    const formData = new FormData()
-    const email = JSON.parse(localStorage.getItem("user")).email
-    formData.append('file', file)
-    formData.append('email', email)
-
-    this.store
-      .bills()
-      .create({
-        data: formData,
-        headers: {
-          noContentType: true
-        }
-      })
-      .then(({fileUrl, key}) => {
-        console.log(fileUrl)
-        this.billId = key
-        this.fileUrl = fileUrl
-        this.fileName = fileName
-      }).catch(error => console.error(error))
+    this.formData.append('file', file)
   }
+
   handleSubmit = e => {
     e.preventDefault()
-    console.log('e.target.querySelector(`input[data-testid="datepicker"]`).value', e.target.querySelector(`input[data-testid="datepicker"]`).value)
-    const email = JSON.parse(localStorage.getItem("user")).email
-    const bill = {
-      email,
-      type: e.target.querySelector(`select[data-testid="expense-type"]`).value,
-      name:  e.target.querySelector(`input[data-testid="expense-name"]`).value,
-      amount: parseInt(e.target.querySelector(`input[data-testid="amount"]`).value),
-      date:  e.target.querySelector(`input[data-testid="datepicker"]`).value,
-      vat: e.target.querySelector(`input[data-testid="vat"]`).value,
-      pct: parseInt(e.target.querySelector(`input[data-testid="pct"]`).value) || 20,
-      commentary: e.target.querySelector(`textarea[data-testid="commentary"]`).value,
-      fileUrl: this.fileUrl,
-      fileName: this.fileName,
-      status: 'pending'
-    }
-    this.updateBill(bill)
-    this.onNavigate(ROUTES_PATH['Bills'])
+    const t = e.target
+
+    this.formData.append('email', JSON.parse(localStorage.getItem("user")).email)
+    this.formData.append('type', t.querySelector(`select[data-testid="expense-type"]`).value,)
+    this.formData.append('name', t.querySelector(`input[data-testid="expense-name"]`).value)
+    this.formData.append('amount', t.querySelector(`input[data-testid="amount"]`).value)
+    this.formData.append('date', t.querySelector(`input[data-testid="datepicker"]`).value)
+    this.formData.append('vat', t.querySelector(`input[data-testid="vat"]`).value)
+    this.formData.append('pct', t.querySelector(`input[data-testid="pct"]`).value)
+    this.formData.append('commentary', t.querySelector(`textarea[data-testid="commentary"]`).value)
+    this.formData.append('status', 'pending')
+
+    this.store.bills().create({
+          data: this.formData,
+          headers: {
+            noContentType: true
+          }
+        })
+        .then(({key}) => {
+          this.billId = key
+          this.onNavigate(ROUTES_PATH['Bills'])
+        }).catch(error => console.error(error))
   }
 
   // not need to cover this function by tests
-  updateBill = (bill) => {
+  /*updateBill = (bill) => {
     if (this.store) {
       this.store
       .bills()
@@ -85,5 +71,5 @@ export default class NewBill {
       })
       .catch(error => console.error(error))
     }
-  }
+  }*/
 }
