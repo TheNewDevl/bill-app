@@ -120,6 +120,31 @@ describe('Given I am connected as an Admin', () => {
   })
 
   describe('When I am on Dashboard page and I click 2 times on edit icon of a card', () => {
+    test('Then, bills should be hidden',  () => {
+
+      const onNavigate = (pathname) => {
+        document.body.innerHTML = ROUTES({ pathname })
+      }
+      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+      window.localStorage.setItem('user', JSON.stringify({
+        type: 'Admin'
+      }))
+
+      const dashboard = new Dashboard({
+        document, onNavigate, store: null, bills:bills, localStorage: window.localStorage
+      })
+      document.body.innerHTML = DashboardUI({ data: { bills } })
+      const handleShowTickets1 = jest.fn((e) => dashboard.handleShowTickets(e, bills, 0))
+      const icon1 = screen.getByTestId('arrow-icon1')
+      icon1.addEventListener('click', handleShowTickets1)
+      userEvent.click(icon1)
+      userEvent.click(icon1)
+      const billsContainer = document.querySelector('#status-bills-container1')
+      expect(billsContainer.innerHTML).toBe('')
+    })
+  })
+
+  describe('When I am on Dashboard page and I click 2 times on edit icon of a card', () => {
     test('Then, big bill Icon should Appear',  () => {
 
       const onNavigate = (pathname) => {
