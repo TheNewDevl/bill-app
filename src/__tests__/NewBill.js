@@ -53,10 +53,55 @@ describe("Given I am connected as an employee", () => {
         expect(input.files.length).toBe(0)
         expect(input.value).toBe("")
       });
-      test( 'Bills store should not be updated', function () {
+      test( 'Bills store should not be updated',  function () {
         const input = screen.getByTestId('file')
         userEvent.upload(input, invalidFile)
-        expect(mockStore.bills().list().length).toBe(4)
+        mockStore.bills().list().then(
+            bills => expect(bills.length).toBe(4)
+          )
+      });
+    });
+
+    describe('when I upload a valid file', function () {
+      const validFile = new File(["file"], "valid-file", {
+        type: "image/png"
+      });
+      beforeEach(() => {
+        const onNavigate = (pathname) => {
+          document.body.innerHTML = ROUTES({ pathname })
+        }
+        new NewBill({
+          document, onNavigate, store: mockStore, localStorageMock })
+      })
+
+      test( 'Input files length should be 1', function () {
+        const input = screen.getByTestId('file')
+        userEvent.upload(input, validFile)
+        expect(input.files.length).toBe(1)
+      });
+      test( 'Bills store should have one more item', function () {
+        mockStore.bills().list().then(
+            bills => expect(bills.length).toBe(5)
+          )
+      });
+      test( 'if error, should log error', async function () {
+        const logSpy = jest.spyOn(console, 'error').mockImplementation(()=>{})
+        const error = "une erreur est survenue"
+        jest.spyOn(mockStore, "bills").mockImplementationOnce(() => {
+            return {
+              create : () => Promise.reject(error)
+          }})
+        const onNavigate = (pathname) => {
+          document.body.innerHTML = ROUTES({ pathname })
+        }
+        new NewBill({
+          document, onNavigate, store: mockStore, localStorageMock })
+        const input = screen.getByTestId('file')
+        await userEvent.upload(input, validFile)
+        await logSpy
+
+        expect(logSpy).toHaveBeenCalledTimes(1)
+        expect(logSpy).toHaveBeenCalledWith(error)
       });
     });
 
