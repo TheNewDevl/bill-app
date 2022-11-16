@@ -140,7 +140,8 @@ describe('Given I am connected as an Admin', () => {
       userEvent.click(icon1)
       userEvent.click(icon1)
       const billsContainer = document.querySelector('#status-bills-container1')
-      expect(billsContainer.innerHTML).toBe('')
+      expect(billsContainer).toBeTruthy()
+      expect(billsContainer.children.length).toBe(0)
     })
   })
 
