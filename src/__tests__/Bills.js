@@ -5,7 +5,7 @@
 import {screen, waitFor} from "@testing-library/dom"
 import BillsUI from "../views/BillsUI.js"
 import { bills } from "../fixtures/bills"
-import { ROUTES_PATH } from "../constants/routes"
+import {ROUTES, ROUTES_PATH} from "../constants/routes"
 import { localStorageMock } from "../__mocks__/localStorage.js"
 import mockStore from "../__mocks__/store"
 import router from "../app/Router"
@@ -59,6 +59,28 @@ describe("Given I am connected as an employee", () => {
     })
   })
 })
+
+describe('Given I am connected as an Employee ', function () {
+  describe('When there are no iconEye in the page', function () {
+    test('Then it should not add any event and not throwing error ', function () {
+      const onNavigate = (pathname) => {
+        document.body.innerHTML = ROUTES({ pathname })
+      }
+      new Bills({
+        document, onNavigate, store: mockStore, localStorage: window.localStorage})
+    });
+  });
+  describe('When store is null', function () {
+    test('Then it should return undefined', function () {
+      const onNavigate = (pathname) => {
+        document.body.innerHTML = ROUTES({ pathname })
+      }
+      const billsInstance = new Bills({
+        document, onNavigate, store: null, localStorage: window.localStorage})
+      expect(billsInstance.getBills()).toBeUndefined()
+    });
+  });
+});
 
 // test d'intégration GET
 jest.mock("../app/store", () => mockStore)
