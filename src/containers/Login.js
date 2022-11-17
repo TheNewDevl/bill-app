@@ -24,17 +24,7 @@ export default class Login {
       status: "connected"
     }
     this.localStorage.setItem("user", JSON.stringify(user))
-    this.login(user)
-      .catch(
-        (err) => this.createUser(user)
-      )
-      .then(() => {
-        this.onNavigate(ROUTES_PATH['Bills'])
-        this.PREVIOUS_LOCATION = ROUTES_PATH['Bills']
-        PREVIOUS_LOCATION = this.PREVIOUS_LOCATION
-        this.document.body.style.backgroundColor="#fff"
-      })
-
+    this.login(user, e).catch((err) => this.createUser(user, e))
   }
 
   handleSubmitAdmin = e => {
@@ -46,35 +36,54 @@ export default class Login {
       status: "connected"
     }
     this.localStorage.setItem("user", JSON.stringify(user))
-    this.login(user)
-      .catch(
-        (err) => this.createUser(user)
-      )
-      .then(() => {
-        this.onNavigate(ROUTES_PATH['Dashboard'])
-        this.PREVIOUS_LOCATION = ROUTES_PATH['Dashboard']
-        PREVIOUS_LOCATION = this.PREVIOUS_LOCATION
-        document.body.style.backgroundColor="#fff"
-      })
+    this.login(user, e).catch((err) => this.createUser(user, e))
   }
 
   // not need to cover this function by tests
-  login = (user) => {
+  login = (user, e) => {
     if (this.store) {
       return this.store
       .login(JSON.stringify({
         email: user.email,
         password: user.password,
       })).then(({jwt}) => {
-        localStorage.setItem('jwt', jwt)
+        this.removeError(e)
+        this.localStorage.setItem('jwt', jwt)
+        const title = e.target.firstElementChild.textContent
+        this.onNavigate(ROUTES_PATH[title === "Employé" ? "Bills" : "Dashboard"])
+        this.PREVIOUS_LOCATION = ROUTES_PATH[title === "Employé" ? "Bills" : "Dashboard"]
+        PREVIOUS_LOCATION = this.PREVIOUS_LOCATION
+        document.body.style.backgroundColor="#fff"
       })
     } else {
       return null
     }
   }
 
+  /** @param e{SubmitEvent} to get target
+   *  @param error{string} error to display
+   */
+  setError = (e, error) => {
+    const existingError = e.target.querySelector(".login-error")
+    if(!existingError){
+      const p = document.createElement('p')
+      p.textContent = error
+      p.className = "login-error"
+      p.setAttribute('data-testid', "login-error")
+      e.target.append(p)
+    }
+  }
+
+  /** @param e{SubmitEvent} to get target */
+  removeError = (e) => {
+    const existingError = e.target.querySelector(".login-error")
+    if(existingError){
+      existingError.remove()
+    }
+  }
+
   // not need to cover this function by tests
-  createUser = (user) => {
+  createUser = (user, e) => {
     if (this.store) {
       return this.store
       .users()
@@ -86,7 +95,10 @@ export default class Login {
       })})
       .then(() => {
         console.log(`User with ${user.email} is created`)
-        return this.login(user)
+        return this.login(user, e)
+      }).catch(err => {
+        console.error(err)
+        this.setError(e, err)
       })
     } else {
       return null
