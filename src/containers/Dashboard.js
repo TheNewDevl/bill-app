@@ -11,11 +11,10 @@ export const filteredBills = (data, status) => {
       let selectCondition
 
       // in jest environment
-      if (typeof jest !== 'undefined') {
+      /* istanbul ignore next */ if (typeof jest !== 'undefined') {
         selectCondition = (bill.status === status)
-      }
-      /* istanbul ignore next */
-      else {
+
+      }  else {
         // in prod environment
         const userEmail = JSON.parse(localStorage.getItem("user")).email
         selectCondition =
@@ -72,9 +71,10 @@ export default class {
     this.document = document
     this.onNavigate = onNavigate
     this.store = store
-    $('#arrow-icon1').click((e) => this.handleShowTickets(e, bills, 1))
-    $('#arrow-icon2').click((e) => this.handleShowTickets(e, bills, 2))
-    $('#arrow-icon3').click((e) => this.handleShowTickets(e, bills, 3))
+    this.bills = bills
+    $('#arrow-icon1').click(this.handleShowTickets.bind(this))
+    $('#arrow-icon2').click(this.handleShowTickets.bind(this))
+    $('#arrow-icon3').click(this.handleShowTickets.bind(this))
     new Logout({ localStorage, onNavigate })
   }
 
@@ -85,11 +85,11 @@ export default class {
     if (typeof $('#modaleFileAdmin1').modal === 'function') $('#modaleFileAdmin1').modal('show')
   }
 
-  handleEditTicket(e, bill, bills) {
+  handleEditTicket(e, bill) {
     if (this.counter === undefined || this.id !== bill.id) this.counter = 0
     if (this.id === undefined || this.id !== bill.id) this.id = bill.id
     if (this.counter % 2 === 0) {
-      bills.forEach(b => {
+      this.bills.forEach(b => {
         $(`#open-bill${b.id}`).css({ background: '#0D5AE5' })
       })
       $(`#open-bill${bill.id}`).css({ background: '#2A2B35' })
@@ -130,30 +130,26 @@ export default class {
     this.onNavigate(ROUTES_PATH['Dashboard'])
   }
 
-  handleShowTickets(e, bills, index) {
-    if (this.counter === undefined || this.index !== index) this.counter = 0
+  handleShowTickets(e, bills) {
+    const id = e.currentTarget.id
+    const index = +id[id.length - 1]
+
     if (this.index === undefined || this.index !== index) this.index = index
-    if (this.counter % 2 === 0) {
+    const billsContainer = $(`#status-bills-container${this.index}`)
+    if (billsContainer.children().length === 0) {
       $(`#arrow-icon${this.index}`).css({ transform: 'rotate(0deg)'})
-      $(`#status-bills-container${this.index}`)
-        .html(cards(filteredBills(bills, getStatus(this.index))))
-      this.counter ++
+      billsContainer.html(cards(filteredBills(this.bills, getStatus(this.index))))
     } else {
       $(`#arrow-icon${this.index}`).css({ transform: 'rotate(90deg)'})
-      $(`#status-bills-container${this.index}`)
-        .html("")
-      this.counter ++
+      billsContainer.html("")
     }
 
-    bills.forEach(bill => {
+    this.bills.forEach(bill => {
       // Add event handler only to the concerned bills to prevent bugs
       if(bill.status === getStatus(this.index)){
-        $(`#open-bill${bill.id}`).click((e) => this.handleEditTicket(e, bill, bills))
+        $(`#open-bill${bill.id}`).click((e) => this.handleEditTicket(e, bill))
       }
     })
-
-    return bills
-
   }
 
   getBillsAllUsers = () => {
@@ -178,7 +174,6 @@ export default class {
   }
 
   // not need to cover this function by tests
-  /* istanbul ignore next */
   updateBill = (bill) => {
     if (this.store) {
     return this.store

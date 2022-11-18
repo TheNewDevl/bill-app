@@ -2,11 +2,11 @@
  * @jest-environment jsdom
  */
 
-import {fireEvent, screen, waitFor} from "@testing-library/dom"
+import { screen, waitFor} from "@testing-library/dom"
 import userEvent from '@testing-library/user-event'
 import DashboardFormUI from "../views/DashboardFormUI.js"
 import DashboardUI from "../views/DashboardUI.js"
-import Dashboard, { filteredBills, cards } from "../containers/Dashboard.js"
+import Dashboard, { filteredBills, cards, card } from "../containers/Dashboard.js"
 import { ROUTES, ROUTES_PATH } from "../constants/routes"
 import { localStorageMock } from "../__mocks__/localStorage.js"
 import mockStore from "../__mocks__/store"
@@ -187,52 +187,42 @@ describe('Given I am connected as an Admin', () => {
 })
 
 describe('Given I am connected as Admin, and I am on Dashboard page, and I clicked on a pending bill', () => {
+
+  beforeEach(async ()=> {
+    Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+    window.localStorage.setItem('user', JSON.stringify({
+      type: 'Admin'
+    }))
+    document.body.innerHTML = DashboardUI({ data: { bills } })
+
+    const onNavigate = (pathname) => {
+      document.body.innerHTML = ROUTES({ pathname })
+    }
+    new Dashboard({
+      document, onNavigate, store: mockStore, bills, localStorage: localStorageMock
+    })
+    const showBillsA = await waitFor(()=>screen.getByTestId("arrow-icon1"))
+    await userEvent.click(showBillsA)
+    const openBill = await waitFor(()=>screen.getByTestId(/^open-bill/i))
+    await userEvent.click(openBill)
+  })
+  afterEach(()=> {
+    document.body.innerHTML = ""
+    jest.resetAllMocks()
+  })
   describe('When I click on accept button', () => {
-    test('I should be sent on Dashboard with big billed icon instead of form', () => {
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-      window.localStorage.setItem('user', JSON.stringify({
-        type: 'Admin'
-      }))
-      document.body.innerHTML = DashboardFormUI(bills[0])
-
-      const onNavigate = (pathname) => {
-        document.body.innerHTML = ROUTES({ pathname })
-      }
-      const store = null
-      const dashboard = new Dashboard({
-        document, onNavigate, store, bills, localStorage: window.localStorage
-      })
-
-      const acceptButton = screen.getByTestId("btn-accept-bill-d")
-      const handleAcceptSubmit = jest.fn((e) => dashboard.handleAcceptSubmit(e, bills[0]))
-      acceptButton.addEventListener("click", handleAcceptSubmit)
-      fireEvent.click(acceptButton)
-      expect(handleAcceptSubmit).toHaveBeenCalled()
-      const bigBilledIcon = screen.queryByTestId("big-billed-icon")
+    test('I should be sent on Dashboard with big billed icon instead of form', async() => {
+      const acceptButton = await waitFor(()=>screen.getByTestId("btn-accept-bill-d"))
+      await userEvent.click(acceptButton)
+      const bigBilledIcon = await  waitFor(() => screen.getByTestId("big-billed-icon"))
       expect(bigBilledIcon).toBeTruthy()
     })
   })
   describe('When I click on refuse button', () => {
-    test('I should be sent on Dashboard with big billed icon instead of form', () => {
-      Object.defineProperty(window, 'localStorage', { value: localStorageMock })
-      window.localStorage.setItem('user', JSON.stringify({
-        type: 'Admin'
-      }))
-      document.body.innerHTML = DashboardFormUI(bills[0])
-
-      const onNavigate = (pathname) => {
-        document.body.innerHTML = ROUTES({ pathname })
-      }
-      const store = null
-      const dashboard = new Dashboard({
-        document, onNavigate, store, bills, localStorage: window.localStorage
-      })
-      const refuseButton = screen.getByTestId("btn-refuse-bill-d")
-      const handleRefuseSubmit = jest.fn((e) => dashboard.handleRefuseSubmit(e, bills[0]))
-      refuseButton.addEventListener("click", handleRefuseSubmit)
-      fireEvent.click(refuseButton)
-      expect(handleRefuseSubmit).toHaveBeenCalled()
-      const bigBilledIcon = screen.queryByTestId("big-billed-icon")
+    test('I should be sent on Dashboard with big billed icon instead of form', async () => {
+      const refuseBillBtn = await waitFor(()=>screen.getByTestId("btn-refuse-bill-d"))
+      await userEvent.click(refuseBillBtn)
+      const bigBilledIcon = await  waitFor(() => screen.getByTestId("big-billed-icon"))
       expect(bigBilledIcon).toBeTruthy()
     })
   })
@@ -241,6 +231,7 @@ describe('Given I am connected as Admin, and I am on Dashboard page, and I click
 describe('Given I am connected as Admin and I am on Dashboard page and I clicked on a bill', () => {
   describe('When I click on the icon eye', () => {
     test('A modal should open', () => {
+      $.fn.modal = jest.fn()
       Object.defineProperty(window, 'localStorage', { value: localStorageMock })
       window.localStorage.setItem('user', JSON.stringify({
         type: 'Admin'
@@ -262,6 +253,10 @@ describe('Given I am connected as Admin and I am on Dashboard page and I clicked
 
       const modale = screen.getByTestId('modaleFileAdmin')
       expect(modale).toBeTruthy()
+
+      // cover case where typeof $('#modaleFileAdmin1').modal !== 'function'
+      $.fn.modal = ""
+      userEvent.click(eye)
     })
   })
 })
@@ -329,7 +324,68 @@ describe("Given I am a user connected as Admin", () => {
       expect(message).toBeTruthy()
     })
   })
-
   })
 })
 
+
+describe('Card test suit', function () {
+  const bill =  {
+    "id": "qcCK3SzECmaZAGRrHjaC",
+    "amount": 200,
+    "email": "firstname.lastname@mail.mail",
+    "name": "test2",
+    "date": "2002-02-02",
+    "commentAdmin": "pas la bonne facture",
+    "type": "Restaurants et bars",
+  }
+  afterEach(() => document.body.innerHTML = "")
+  test('should split first and last name ', function () {
+    document.body.innerHTML = card(bill)
+    expect(document.querySelector('.bill-card-name').innerHTML).toContain("firstname lastname")
+  });
+});
+
+describe('Dashboad update bills test suit ', function () {
+  test('Should not call store method as store is null', function (){
+    jest.resetAllMocks()
+    mockStore.bills.mockImplementationOnce(()=> {
+      return {
+        update: jest.fn().mockImplementation(()=> {
+          return Promise.resolve({})
+        })
+      }
+    })
+    const DashboardInstance = new Dashboard({document, onNavigate: null, bills, localStorage,store : null})
+    DashboardInstance.updateBill(bills[0])
+    DashboardInstance.getBillsAllUsers()
+    expect(mockStore.bills).toHaveBeenCalledTimes(0)
+  });
+  test('Should call update store method', function (){
+    jest.resetAllMocks()
+    mockStore.bills.mockImplementationOnce(()=> {
+      return {
+        update: jest.fn().mockImplementation(()=> {
+          return Promise.resolve({})
+        })
+      }
+    })
+    const DashboardInstance = new Dashboard({document, onNavigate: null, bills, localStorage,store : mockStore})
+    DashboardInstance.updateBill(bills[0])
+    expect(mockStore.bills).toHaveBeenCalledTimes(1)
+  });
+  test('Should log error', async function (){
+    jest.resetAllMocks()
+    mockStore.bills.mockImplementationOnce(()=> {
+      return {
+        update: jest.fn().mockImplementation(()=> {
+          return Promise.reject(new Error('update error'))
+        })
+      }
+    })
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(()=> {})
+    const DashboardInstance = new Dashboard({document, onNavigate: null, bills, localStorage,store : mockStore})
+    DashboardInstance.updateBill(bills[0])
+    await new Promise((e)=> setTimeout(e, 100))
+    expect(logSpy).toHaveBeenCalledWith(new Error('update error'))
+  });
+});
